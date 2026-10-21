@@ -46,4 +46,7 @@ jobs:
           node-version: '20'
       - run: npm i -g @webos-tools/cli
       - run: ./build.sh webos && ./build.sh tizen && ./build.sh web
-      - uses:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RoseOS-webos-tizen-web
+          path: dist/
