@@ -5,11 +5,22 @@ on:
   push:
     branches: [main]
 
+env:
+  # À adapter selon votre arborescence ("." = racine du dépôt)
+  ANDROID_DIR: .
+  WEB_DIR: .
+
 jobs:
   android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Afficher l'arborescence (diagnostic)
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 \( -name "gradlew" -o -name "settings.gradle*" -o -name "build.sh" \) -not -path "./.git/*"
 
       - uses: actions/setup-java@v4
         with:
@@ -29,24 +40,34 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build APK
+        working-directory: ${{ env.ANDROID_DIR }}
         run: |
-          if [ -x ./gradlew ]; then ./gradlew assembleDebug --no-daemon; else gradle assembleDebug --no-daemon; fi
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: RoseOS-androidtv
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.ANDROID_DIR }}/app/build/outputs/apk/debug/app-debug.apk
 
   webos-tizen-web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - run: npm i -g @webos-tools/cli
-      - run: ./build.sh webos && ./build.sh tizen && ./build.sh web
+
+      - name: Build webOS / Tizen / Web
+        working-directory: ${{ env.WEB_DIR }}
+        run: |
+          chmod +x ./build.sh
+          ./build.sh webos && ./build.sh tizen && ./build.sh web
+
       - uses: actions/upload-artifact@v4
         with:
           name: RoseOS-webos-tizen-web
-          path: dist/
+          path: ${{ env.WEB_DIR }}/dist/
