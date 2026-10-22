@@ -5,50 +5,34 @@ on:
   push:
     branches: [main]
 
-env:
-  # À adapter selon votre arborescence ("." = racine du dépôt)
-  ANDROID_DIR: .
-  WEB_DIR: .
-
 jobs:
   android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Afficher l'arborescence (diagnostic)
-        run: |
-          pwd
-          ls -la
-          find . -maxdepth 3 \( -name "gradlew" -o -name "settings.gradle*" -o -name "build.sh" \) -not -path "./.git/*"
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: ''
+      - uses: android-actions/setup-android@v3
 
       - name: Install SDK packages
-        run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
+      # Gradle 8.7 fixé : compatible avec le plugin Android 8.5.2 (pas besoin de gradlew)
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
       - name: Build APK
-        working-directory: ${{ env.ANDROID_DIR }}
-        run: |
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: RoseOS-androidtv
-          path: ${{ env.ANDROID_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
 
   webos-tizen-web:
     runs-on: ubuntu-latest
@@ -62,12 +46,13 @@ jobs:
       - run: npm i -g @webos-tools/cli
 
       - name: Build webOS / Tizen / Web
-        working-directory: ${{ env.WEB_DIR }}
         run: |
-          chmod +x ./build.sh
-          ./build.sh webos && ./build.sh tizen && ./build.sh web
+          chmod +x build.sh
+          ./build.sh webos
+          ./build.sh tizen
+          ./build.sh web
 
       - uses: actions/upload-artifact@v4
         with:
           name: RoseOS-webos-tizen-web
-          path: ${{ env.WEB_DIR }}/dist/
+          path: dist/
